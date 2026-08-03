@@ -16,6 +16,11 @@ meta del mes = ⌈ (laborables − vacaciones − feriados) × 0.6 ⌉
 Ejemplo: un mes con 21 días laborables y 2 días de vacaciones →
 ⌈19 × 0.6⌉ = ⌈11.4⌉ = **12 días de oficina**.
 
+Los **feriados nacionales de Perú 🇵🇪 vienen precargados** (los 14 de fecha
+fija más Jueves y Viernes Santo, calculados para cualquier año) y descuentan
+automáticamente de la meta. Si fuiste a la oficina un feriado, puedes marcarlo
+como asistido y tu marca tiene prioridad.
+
 ## Pantallas
 
 1. **Marcar asistencia** — al abrir la app te pregunta con dos botones grandes:
@@ -107,6 +112,7 @@ tests/attendance.test.ts    # tests del cálculo
 - [ ] **Auto check-in por ubicación**: usar geofencing (`expo-location` +
       `expo-task-manager`) para detectar cuando llegas a la oficina y enviar
       una push con un solo toque para marcar la asistencia.
-- [ ] Precargar feriados del país automáticamente.
+- [x] Precargar feriados del país automáticamente (Perú 🇵🇪).
+- [ ] Feriados de otros países / días no laborables decretados.
 - [ ] Widget con el contador de días restantes.
 - [ ] Exportar el historial del mes (CSV).

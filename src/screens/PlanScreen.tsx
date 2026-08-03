@@ -10,6 +10,7 @@ import {
 import CalendarGrid from '../components/CalendarGrid';
 import MonthHeader from '../components/MonthHeader';
 import { fromISO, isWeekday, monthStats } from '../logic/attendance';
+import { withPeruHolidays } from '../logic/holidays';
 import {
   applyReminder,
   ensurePermissions,
@@ -40,7 +41,9 @@ export default function PlanScreen({
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
 
-  const stats = monthStats(year, month, days, todayISO);
+  // Feriados de Perú precargados; lo que marque el usuario tiene prioridad.
+  const effectiveDays = withPeruHolidays(days, year);
+  const stats = monthStats(year, month, effectiveDays, todayISO);
   const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
   const planned = Object.keys(plan).filter((d) => d.startsWith(monthPrefix)).length;
   const enough = planned + stats.attended >= stats.required;
@@ -53,7 +56,7 @@ export default function PlanScreen({
 
   const handlePressDay = (iso: string) => {
     if (!isWeekday(iso)) return;
-    const status = days[iso];
+    const status = effectiveDays[iso];
     if (status === 'vacation' || status === 'holiday' || status === 'attended') {
       return;
     }
@@ -128,7 +131,7 @@ export default function PlanScreen({
       <CalendarGrid
         year={year}
         month={month}
-        days={days}
+        days={effectiveDays}
         plan={plan}
         todayISO={todayISO}
         onPressDay={handlePressDay}

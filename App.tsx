@@ -11,7 +11,8 @@ import {
 import CalendarScreen from './src/screens/CalendarScreen';
 import CheckInScreen from './src/screens/CheckInScreen';
 import PlanScreen from './src/screens/PlanScreen';
-import { toISO } from './src/logic/attendance';
+import { isWeekday, toISO } from './src/logic/attendance';
+import { peruHolidayName } from './src/logic/holidays';
 import { colors } from './src/theme';
 import {
   DEFAULT_REMINDER,
@@ -41,8 +42,8 @@ export default function App() {
       setDays(d);
       setPlan(p);
       setReminder(r);
-      // Si hoy ya está marcado, saltamos directo al calendario.
-      if (d[todayISO]) {
+      // Si hoy ya está marcado, es fin de semana o feriado, vamos directo al calendario.
+      if (d[todayISO] || !isWeekday(todayISO) || peruHolidayName(todayISO)) {
         setScreen('calendar');
       }
       setLoading(false);

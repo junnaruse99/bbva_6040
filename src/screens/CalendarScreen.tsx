@@ -10,6 +10,7 @@ import {
 import CalendarGrid from '../components/CalendarGrid';
 import MonthHeader from '../components/MonthHeader';
 import { fromISO, monthStats } from '../logic/attendance';
+import { peruHolidayName, withPeruHolidays } from '../logic/holidays';
 import { colors } from '../theme';
 import { DayMap, DayStatus, PlanMap } from '../types';
 
@@ -34,7 +35,9 @@ export default function CalendarScreen({ days, plan, todayISO, onSetDay }: Props
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const stats = monthStats(year, month, days, todayISO);
+  // Feriados de Perú precargados; lo que marque el usuario tiene prioridad.
+  const effectiveDays = withPeruHolidays(days, year);
+  const stats = monthStats(year, month, effectiveDays, todayISO);
 
   const move = (delta: number) => {
     const d = new Date(year, month - 1 + delta, 1);
@@ -75,7 +78,7 @@ export default function CalendarScreen({ days, plan, todayISO, onSetDay }: Props
       <CalendarGrid
         year={year}
         month={month}
-        days={days}
+        days={effectiveDays}
         plan={plan}
         todayISO={todayISO}
         onPressDay={setSelected}
@@ -91,7 +94,8 @@ export default function CalendarScreen({ days, plan, todayISO, onSetDay }: Props
 
       <Text style={styles.hint}>
         Toca un día para marcarlo. La meta es el 60% de los días laborables
-        (menos vacaciones y feriados), redondeado hacia arriba.
+        (menos vacaciones y feriados), redondeado hacia arriba. Los feriados de
+        Perú 🇵🇪 ya vienen precargados; si fuiste un feriado, márcalo y contará.
       </Text>
 
       <Modal
@@ -109,6 +113,11 @@ export default function CalendarScreen({ days, plan, todayISO, onSetDay }: Props
             <Text style={styles.modalTitle}>
               {selected ? `Día ${fromISO(selected).getDate()}` : ''}
             </Text>
+            {selected && peruHolidayName(selected) ? (
+              <Text style={styles.modalSubtitle}>
+                🇵🇪 {peruHolidayName(selected)}
+              </Text>
+            ) : null}
             {STATUS_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.label}
@@ -239,6 +248,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.navy,
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.purple,
+    textAlign: 'center',
+    marginTop: -8,
     marginBottom: 12,
   },
   modalOption: {
