@@ -20,12 +20,21 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
   }
 }
 
+/** Si el almacenamiento falla (p. ej. web sin localStorage), la app sigue en memoria. */
+async function writeJSON(key: string, value: unknown): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // sin persistencia disponible
+  }
+}
+
 export async function loadDays(): Promise<DayMap> {
   return readJSON<DayMap>(DAYS_KEY, {});
 }
 
 export async function saveDays(days: DayMap): Promise<void> {
-  await AsyncStorage.setItem(DAYS_KEY, JSON.stringify(days));
+  await writeJSON(DAYS_KEY, days);
 }
 
 export async function setDay(
@@ -48,7 +57,7 @@ export async function loadPlan(): Promise<PlanMap> {
 }
 
 export async function savePlan(plan: PlanMap): Promise<void> {
-  await AsyncStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+  await writeJSON(PLAN_KEY, plan);
 }
 
 export async function loadReminder(): Promise<ReminderConfig> {
@@ -56,5 +65,5 @@ export async function loadReminder(): Promise<ReminderConfig> {
 }
 
 export async function saveReminder(config: ReminderConfig): Promise<void> {
-  await AsyncStorage.setItem(REMINDER_KEY, JSON.stringify(config));
+  await writeJSON(REMINDER_KEY, config);
 }

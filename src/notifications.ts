@@ -2,16 +2,22 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { ReminderConfig } from './types';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+/** Las notificaciones programadas solo existen en Android/iOS, no en web. */
+export const notificationsSupported = Platform.OS !== 'web';
+
+if (notificationsSupported) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function ensurePermissions(): Promise<boolean> {
+  if (!notificationsSupported) return false;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('recordatorios', {
       name: 'Recordatorios de asistencia',
@@ -29,6 +35,7 @@ export async function ensurePermissions(): Promise<boolean> {
  * Cancela cualquier recordatorio anterior antes de programar.
  */
 export async function applyReminder(config: ReminderConfig): Promise<void> {
+  if (!notificationsSupported) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
   if (!config.enabled) return;
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,7 +10,12 @@ import {
 import CalendarGrid from '../components/CalendarGrid';
 import MonthHeader from '../components/MonthHeader';
 import { fromISO, isWeekday, monthStats } from '../logic/attendance';
-import { applyReminder, ensurePermissions } from '../notifications';
+import {
+  applyReminder,
+  ensurePermissions,
+  notificationsSupported,
+} from '../notifications';
+import { showAlert } from '../alert';
 import { colors } from '../theme';
 import { DayMap, PlanMap, ReminderConfig } from '../types';
 
@@ -65,9 +69,16 @@ export default function PlanScreen({
 
   const toggleEnabled = async (enabled: boolean) => {
     if (enabled) {
+      if (!notificationsSupported) {
+        showAlert(
+          'No disponible en web',
+          'Los recordatorios solo funcionan en la app instalada en Android o iOS.'
+        );
+        return;
+      }
       const granted = await ensurePermissions();
       if (!granted) {
-        Alert.alert(
+        showAlert(
           'Permiso necesario',
           'Activa las notificaciones para la app 6040 en los ajustes del teléfono.'
         );
@@ -78,7 +89,7 @@ export default function PlanScreen({
     onSaveReminder(next);
     await applyReminder(next);
     if (enabled) {
-      Alert.alert(
+      showAlert(
         'Recordatorio activado',
         `Te avisaré de lunes a viernes a las ${formatTime(next)} para marcar tu asistencia.`
       );
@@ -88,7 +99,7 @@ export default function PlanScreen({
   const saveTime = async () => {
     if (reminder.enabled) {
       await applyReminder(reminder);
-      Alert.alert('Listo', `Recordatorio actualizado a las ${formatTime(reminder)}.`);
+      showAlert('Listo', `Recordatorio actualizado a las ${formatTime(reminder)}.`);
     }
   };
 

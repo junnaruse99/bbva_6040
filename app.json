@@ -17,6 +17,10 @@
       "package": "com.junnaruse.app6040",
       "edgeToEdgeEnabled": true
     },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
     "plugins": [
       [
         "expo-notifications",

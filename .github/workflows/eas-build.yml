@@ -1,0 +1,38 @@
+name: Build APK Android (EAS)
+
+# Se lanza a mano desde la pestaña Actions de GitHub (funciona desde el celular).
+# Requiere el secret EXPO_TOKEN: crea un token en https://expo.dev/settings/access-tokens
+# y guárdalo en Settings → Secrets and variables → Actions → New repository secret.
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Crear/vincular proyecto en Expo
+        run: eas init --force --non-interactive
+
+      - name: Compilar APK
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+
+      - name: Dónde descargar
+        run: echo "Sigue el progreso y descarga el APK en https://expo.dev (sección Builds del proyecto bbva-6040)."

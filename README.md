@@ -32,6 +32,28 @@ Ejemplo: un mes con 21 días laborables y 2 días de vacaciones →
 
 Todos los datos se guardan en tu teléfono (no hay servidor ni cuenta).
 
+## Probarla solo con el celular (sin laptop)
+
+**Opción A — Versión web (instantánea).** La app también corre en el navegador.
+Abre el enlace del artifact publicado desde Claude (o genera uno nuevo con
+`npx expo export --platform web`). Todo funciona igual salvo los
+recordatorios, que solo existen en la app nativa.
+
+**Opción B — APK de Android vía GitHub Actions (sin instalar nada).**
+Todo se hace desde el navegador del celular:
+
+1. Crea una cuenta gratuita en [expo.dev](https://expo.dev) y genera un token
+   en *Settings → Access tokens*.
+2. En GitHub: *Settings → Secrets and variables → Actions → New repository
+   secret*, nombre `EXPO_TOKEN`, pega el token.
+3. Pestaña *Actions → Build APK Android (EAS) → Run workflow*.
+4. En unos minutos el APK aparece en [expo.dev](https://expo.dev) (sección
+   *Builds*); descárgalo e instálalo en tu Android.
+
+**Opción C — Expo Snack.** Si el repositorio es público, abre
+`https://snack.expo.dev/@git/github.com/<usuario>/<repo>@<rama>` en el celular
+y ejecútalo en la app **Expo Go** (pestaña *My Device*).
+
 ## Cómo ejecutarla
 
 Requisitos: Node.js 20+ y la app **Expo Go** en tu teléfono
