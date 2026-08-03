@@ -11,14 +11,18 @@ import {
 import CalendarScreen from './src/screens/CalendarScreen';
 import CheckInScreen from './src/screens/CheckInScreen';
 import PlanScreen from './src/screens/PlanScreen';
-import { isWeekday, toISO } from './src/logic/attendance';
-import { peruHolidayName } from './src/logic/holidays';
+import { criticalAlertDays, fromISO, isWeekday, toISO } from './src/logic/attendance';
+import { peruHolidayName, withPeruHolidays } from './src/logic/holidays';
+import { applyCriticalAlerts, applyMarkReminder } from './src/notifications';
 import { colors } from './src/theme';
 import {
+  DEFAULT_ALERT,
   DEFAULT_REMINDER,
+  loadAlertConfig,
   loadDays,
   loadPlan,
   loadReminder,
+  saveAlertConfig,
   savePlan,
   saveReminder,
   setDay,
@@ -32,21 +36,44 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('checkin');
   const [days, setDays] = useState<DayMap>({});
   const [plan, setPlan] = useState<PlanMap>({});
-  const [reminder, setReminder] = useState<ReminderConfig>(DEFAULT_REMINDER);
+  const [markReminder, setMarkReminder] = useState<ReminderConfig>(DEFAULT_REMINDER);
+  const [alertConfig, setAlertConfig] = useState<ReminderConfig>(DEFAULT_ALERT);
 
   const todayISO = toISO(new Date());
 
+  // Reprograma las alertas de cumplimiento del mes actual con los datos vigentes.
+  const refreshCriticalAlerts = async (d: DayMap, config: ReminderConfig) => {
+    const today = fromISO(todayISO);
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const critical = criticalAlertDays(
+      year,
+      month,
+      withPeruHolidays(d, year),
+      todayISO
+    );
+    await applyCriticalAlerts(config, critical);
+  };
+
   useEffect(() => {
     (async () => {
-      const [d, p, r] = await Promise.all([loadDays(), loadPlan(), loadReminder()]);
+      const [d, p, r, a] = await Promise.all([
+        loadDays(),
+        loadPlan(),
+        loadReminder(),
+        loadAlertConfig(),
+      ]);
       setDays(d);
       setPlan(p);
-      setReminder(r);
+      setMarkReminder(r);
+      setAlertConfig(a);
       // Si hoy ya está marcado, es fin de semana o feriado, vamos directo al calendario.
       if (d[todayISO] || !isWeekday(todayISO) || peruHolidayName(todayISO)) {
         setScreen('calendar');
       }
       setLoading(false);
+      // Las alertas dependen de la fecha: se recalculan en cada apertura.
+      await refreshCriticalAlerts(d, a);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,6 +88,8 @@ export default function App() {
       setPlan(nextPlan);
       await savePlan(nextPlan);
     }
+    // Cada cambio de datos puede alterar qué días son críticos.
+    await refreshCriticalAlerts(next, alertConfig);
   };
 
   const handleCheckIn = async (status: DayStatus) => {
@@ -79,9 +108,20 @@ export default function App() {
     await savePlan(next);
   };
 
-  const handleSaveReminder = async (config: ReminderConfig) => {
-    setReminder(config);
+  const handleSaveMarkReminder = async (config: ReminderConfig, reschedule: boolean) => {
+    setMarkReminder(config);
     await saveReminder(config);
+    if (reschedule) {
+      await applyMarkReminder(config);
+    }
+  };
+
+  const handleSaveAlertConfig = async (config: ReminderConfig, reschedule: boolean) => {
+    setAlertConfig(config);
+    await saveAlertConfig(config);
+    if (reschedule) {
+      await refreshCriticalAlerts(days, config);
+    }
   };
 
   if (loading) {
@@ -121,10 +161,12 @@ export default function App() {
           <PlanScreen
             days={days}
             plan={plan}
-            reminder={reminder}
+            markReminder={markReminder}
+            alertConfig={alertConfig}
             todayISO={todayISO}
             onTogglePlan={handleTogglePlan}
-            onSaveReminder={handleSaveReminder}
+            onSaveMarkReminder={handleSaveMarkReminder}
+            onSaveAlertConfig={handleSaveAlertConfig}
           />
         )}
       </View>

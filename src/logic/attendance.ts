@@ -93,3 +93,30 @@ export function monthStats(
     completed: remaining === 0,
   };
 }
+
+export interface CriticalDay {
+  date: string;
+  remaining: number;
+  available: number;
+}
+
+/**
+ * Días del mes en los que, si no se registra ninguna asistencia adicional,
+ * habrá que ir sí o sí (los días que faltan >= los días disponibles).
+ * Asume que los datos no cambian sin pasar por la app: cada cambio
+ * debe reprogramar las alertas con esta función.
+ */
+export function criticalAlertDays(
+  year: number,
+  month: number,
+  days: DayMap,
+  todayISO: string
+): CriticalDay[] {
+  return workdaysOfMonth(year, month)
+    .filter((d) => d >= todayISO && !days[d])
+    .map((d) => {
+      const stats = monthStats(year, month, days, d);
+      return { date: d, remaining: stats.remaining, available: stats.available };
+    })
+    .filter((c) => c.remaining > 0 && c.remaining >= c.available);
+}

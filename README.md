@@ -32,8 +32,14 @@ como asistido y tu marca tiene prioridad.
    días del mes para cumplir la meta, aparece un **aviso en rojo**. Toca
    cualquier día para marcarlo o corregirlo.
 3. **Plan** — marca en el calendario qué días planeas ir para cumplir tu meta
-   y activa un **recordatorio de lunes a viernes** a la hora que elijas para
-   que la app te pregunte si fuiste o no.
+   y configura dos notificaciones independientes, cada una con su toggle y su
+   horario:
+   - **🔔 Recordatorio para marcar**: de lunes a viernes, a la hora que
+     elijas, te pregunta si fuiste a la oficina.
+   - **🚨 Alerta de cumplimiento**: cuando los días que te faltan son iguales
+     o más que los días disponibles del mes, te avisa cada mañana que ese día
+     tienes que ir sí o sí. Las alertas se recalculan automáticamente cada vez
+     que abres la app o marcas un día.
 
 Todos los datos se guardan en tu teléfono (no hay servidor ni cuenta).
 

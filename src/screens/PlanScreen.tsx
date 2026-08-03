@@ -1,21 +1,11 @@
 import React, { useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import CalendarGrid from '../components/CalendarGrid';
 import MonthHeader from '../components/MonthHeader';
+import ReminderCard from '../components/ReminderCard';
 import { fromISO, isWeekday, monthStats } from '../logic/attendance';
 import { withPeruHolidays } from '../logic/holidays';
-import {
-  applyReminder,
-  ensurePermissions,
-  notificationsSupported,
-} from '../notifications';
+import { ensurePermissions, notificationsSupported } from '../notifications';
 import { showAlert } from '../alert';
 import { colors } from '../theme';
 import { DayMap, PlanMap, ReminderConfig } from '../types';
@@ -23,19 +13,27 @@ import { DayMap, PlanMap, ReminderConfig } from '../types';
 interface Props {
   days: DayMap;
   plan: PlanMap;
-  reminder: ReminderConfig;
+  markReminder: ReminderConfig;
+  alertConfig: ReminderConfig;
   todayISO: string;
   onTogglePlan: (iso: string) => void;
-  onSaveReminder: (config: ReminderConfig) => void;
+  onSaveMarkReminder: (config: ReminderConfig, reschedule: boolean) => Promise<void>;
+  onSaveAlertConfig: (config: ReminderConfig, reschedule: boolean) => Promise<void>;
+}
+
+function formatTime(c: ReminderConfig): string {
+  return `${String(c.hour).padStart(2, '0')}:${String(c.minute).padStart(2, '0')}`;
 }
 
 export default function PlanScreen({
   days,
   plan,
-  reminder,
+  markReminder,
+  alertConfig,
   todayISO,
   onTogglePlan,
-  onSaveReminder,
+  onSaveMarkReminder,
+  onSaveAlertConfig,
 }: Props) {
   const today = fromISO(todayISO);
   const [year, setYear] = useState(today.getFullYear());
@@ -63,48 +61,50 @@ export default function PlanScreen({
     onTogglePlan(iso);
   };
 
-  const changeTime = (field: 'hour' | 'minute', delta: number) => {
-    const max = field === 'hour' ? 24 : 60;
-    const step = field === 'minute' ? 15 : 1;
-    const value = (reminder[field] + delta * step + max) % max;
-    onSaveReminder({ ...reminder, [field]: value });
-  };
+  const changeTime =
+    (config: ReminderConfig, save: Props['onSaveMarkReminder']) =>
+    (field: 'hour' | 'minute', delta: number) => {
+      const max = field === 'hour' ? 24 : 60;
+      const step = field === 'minute' ? 15 : 1;
+      const value = (config[field] + delta * step + max) % max;
+      // Solo persiste el valor; se programa al pulsar "Guardar horario".
+      void save({ ...config, [field]: value }, false);
+    };
 
-  const toggleEnabled = async (enabled: boolean) => {
-    if (enabled) {
-      if (!notificationsSupported) {
-        showAlert(
-          'No disponible en web',
-          'Los recordatorios solo funcionan en la app instalada en Android o iOS.'
-        );
-        return;
+  const toggle =
+    (config: ReminderConfig, save: Props['onSaveMarkReminder'], onMessage: string) =>
+    async (enabled: boolean) => {
+      if (enabled) {
+        if (!notificationsSupported) {
+          showAlert(
+            'No disponible en web',
+            'Las notificaciones solo funcionan en la app instalada en Android o iOS.'
+          );
+          return;
+        }
+        const granted = await ensurePermissions();
+        if (!granted) {
+          showAlert(
+            'Permiso necesario',
+            'Activa las notificaciones para la app 6040 en los ajustes del teléfono.'
+          );
+          return;
+        }
       }
-      const granted = await ensurePermissions();
-      if (!granted) {
-        showAlert(
-          'Permiso necesario',
-          'Activa las notificaciones para la app 6040 en los ajustes del teléfono.'
-        );
-        return;
+      const next = { ...config, enabled };
+      await save(next, true);
+      if (enabled) {
+        showAlert('Activado', `${onMessage} (${formatTime(next)}).`);
       }
-    }
-    const next = { ...reminder, enabled };
-    onSaveReminder(next);
-    await applyReminder(next);
-    if (enabled) {
-      showAlert(
-        'Recordatorio activado',
-        `Te avisaré de lunes a viernes a las ${formatTime(next)} para marcar tu asistencia.`
-      );
-    }
-  };
+    };
 
-  const saveTime = async () => {
-    if (reminder.enabled) {
-      await applyReminder(reminder);
-      showAlert('Listo', `Recordatorio actualizado a las ${formatTime(reminder)}.`);
-    }
-  };
+  const saveTime =
+    (config: ReminderConfig, save: Props['onSaveMarkReminder']) => async () => {
+      await save(config, true);
+      if (config.enabled) {
+        showAlert('Listo', `Horario actualizado a las ${formatTime(config)}.`);
+      }
+    };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -142,62 +142,32 @@ export default function PlanScreen({
         vacaciones, feriado o ya asistidos no se pueden planificar.
       </Text>
 
-      <View style={styles.card}>
-        <View style={styles.reminderHeader}>
-          <Text style={styles.cardTitle}>🔔 Recordatorio diario</Text>
-          <Switch
-            value={reminder.enabled}
-            onValueChange={toggleEnabled}
-            trackColor={{ true: colors.blue }}
-          />
-        </View>
-        <Text style={styles.cardSubtitle}>
-          De lunes a viernes te preguntaré si fuiste a la oficina.
-        </Text>
+      <ReminderCard
+        title="🔔 Recordatorio para marcar"
+        subtitle="De lunes a viernes te preguntaré si fuiste a la oficina, a la hora que elijas."
+        config={markReminder}
+        onToggle={toggle(
+          markReminder,
+          onSaveMarkReminder,
+          'Te preguntaré de lunes a viernes si fuiste a la oficina'
+        )}
+        onChangeTime={changeTime(markReminder, onSaveMarkReminder)}
+        onSaveTime={saveTime(markReminder, onSaveMarkReminder)}
+      />
 
-        <View style={styles.timeRow}>
-          <TimeStepper
-            value={reminder.hour}
-            onChange={(d) => changeTime('hour', d)}
-          />
-          <Text style={styles.timeSeparator}>:</Text>
-          <TimeStepper
-            value={reminder.minute}
-            onChange={(d) => changeTime('minute', d)}
-          />
-        </View>
-
-        {reminder.enabled ? (
-          <TouchableOpacity style={styles.saveButton} onPress={saveTime}>
-            <Text style={styles.saveButtonText}>Guardar horario</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <ReminderCard
+        title="🚨 Alerta de cumplimiento"
+        subtitle="Si los días que te faltan son iguales o más que los disponibles, te avisaré cada mañana que hoy tienes que ir sí o sí."
+        config={alertConfig}
+        onToggle={toggle(
+          alertConfig,
+          onSaveAlertConfig,
+          'Te avisaré por la mañana cuando tengas que ir sí o sí para cumplir'
+        )}
+        onChangeTime={changeTime(alertConfig, onSaveAlertConfig)}
+        onSaveTime={saveTime(alertConfig, onSaveAlertConfig)}
+      />
     </ScrollView>
-  );
-}
-
-function formatTime(c: ReminderConfig): string {
-  return `${String(c.hour).padStart(2, '0')}:${String(c.minute).padStart(2, '0')}`;
-}
-
-function TimeStepper({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (delta: number) => void;
-}) {
-  return (
-    <View style={styles.stepper}>
-      <TouchableOpacity onPress={() => onChange(1)} style={styles.stepperButton}>
-        <Text style={styles.stepperButtonText}>▲</Text>
-      </TouchableOpacity>
-      <Text style={styles.stepperValue}>{String(value).padStart(2, '0')}</Text>
-      <TouchableOpacity onPress={() => onChange(-1)} style={styles.stepperButton}>
-        <Text style={styles.stepperButtonText}>▼</Text>
-      </TouchableOpacity>
-    </View>
   );
 }
 
@@ -227,67 +197,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 18,
-  },
-  card: {
-    backgroundColor: colors.grayLight,
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 20,
-  },
-  reminderHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.navy,
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: colors.gray,
-    marginTop: 4,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  timeSeparator: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.navy,
-    marginHorizontal: 12,
-  },
-  stepper: {
-    alignItems: 'center',
-  },
-  stepperButton: {
-    padding: 6,
-  },
-  stepperButtonText: {
-    fontSize: 18,
-    color: colors.blue,
-  },
-  stepperValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.navy,
-    minWidth: 56,
-    textAlign: 'center',
-  },
-  saveButton: {
-    backgroundColor: colors.blue,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  saveButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

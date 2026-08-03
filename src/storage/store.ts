@@ -4,10 +4,17 @@ import { DayMap, DayStatus, PlanMap, ReminderConfig } from '../types';
 const DAYS_KEY = '6040/days';
 const PLAN_KEY = '6040/plan';
 const REMINDER_KEY = '6040/reminder';
+const ALERT_KEY = '6040/alert';
 
 export const DEFAULT_REMINDER: ReminderConfig = {
   enabled: false,
   hour: 18,
+  minute: 0,
+};
+
+export const DEFAULT_ALERT: ReminderConfig = {
+  enabled: false,
+  hour: 7,
   minute: 0,
 };
 
@@ -66,4 +73,12 @@ export async function loadReminder(): Promise<ReminderConfig> {
 
 export async function saveReminder(config: ReminderConfig): Promise<void> {
   await writeJSON(REMINDER_KEY, config);
+}
+
+export async function loadAlertConfig(): Promise<ReminderConfig> {
+  return readJSON<ReminderConfig>(ALERT_KEY, DEFAULT_ALERT);
+}
+
+export async function saveAlertConfig(config: ReminderConfig): Promise<void> {
+  await writeJSON(ALERT_KEY, config);
 }
