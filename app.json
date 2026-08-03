@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "6040",
+    "slug": "bbva-6040",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#072146"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.junnaruse.app6040"
+    },
+    "android": {
+      "package": "com.junnaruse.app6040",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#072146"
+        }
+      ]
+    ]
+  }
+}
